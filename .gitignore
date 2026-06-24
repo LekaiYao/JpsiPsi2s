@@ -1,0 +1,69 @@
+# Large/generated analysis outputs
+*.root
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.eps
+*.gif
+
+# Logs and runtime outputs
+*.log
+*log*
+*txt*
+*.txt
+*.out
+*.err
+*.tmp
+*.tar.gz
+*.tgz
+*.pkl
+nohup.out
+
+# ROOT/C++ build products
+*.so
+*.pcm
+*.d
+*.o
+*.a
+*.exe
+
+# Editor/system junk
+*.swp
+.*.swp
+*~
+.DS_Store
+.vscode/
+.idea/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# CMSSW build/runtime products
+biglib/
+bin/
+cfipython/
+config/
+doc/
+include/
+lib/
+logs/
+objs/
+python/__pycache__/
+.SCRAM/
+static/
+test/slc7_amd64_gcc700/
+tmp/
+
+# CRAB outputs
+crab_projects/
+*/crab_*/
+multicrab*
+
+# Local docs/handoff (never push)
+update/
+
+# Markdown: only allow README.md at any level
+*.md
+!README.md
