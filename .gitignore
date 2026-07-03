@@ -64,6 +64,9 @@ multicrab*
 # Local docs/handoff (never push)
 update/
 
+# Local reproduction working dir (reads chensh upstream roots; products only)
+repro/
+
 # Markdown: only allow README.md at any level
 *.md
 !README.md
