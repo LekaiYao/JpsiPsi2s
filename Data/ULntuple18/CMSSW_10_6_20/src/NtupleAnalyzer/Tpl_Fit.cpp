@@ -70,8 +70,8 @@ void Tpl_Fit() {
     };
     for(int i = 0; i < varNum; i++) {
         for(int j = 0; j < binNum[i]; j++) {
-            xSec[i][j] *= 1e-3 / (61.31 * 0.05961 * 0.008) / (bins[i][j + 1] - bins[i][j]);
-            sta[i][j] *= 1e-3 / (61.31 * 0.05961 * 0.008) / (bins[i][j + 1] - bins[i][j]);
+            xSec[i][j] *= 1e-3 / (61.31 * 0.05961 * 0.00794) / (bins[i][j + 1] - bins[i][j]);  // ee BR for psi(2S)
+            sta[i][j] *= 1e-3 / (61.31 * 0.05961 * 0.00794) / (bins[i][j + 1] - bins[i][j]);
         }
     }
     // Systematic uncertainties
