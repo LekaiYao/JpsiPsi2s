@@ -1,4 +1,5 @@
 #include "Plot_4D.hpp"
+#include <fstream>
 
 void Fit_4D_tot() {
     // Define variables and read input file
@@ -180,8 +181,29 @@ void Fit_4D_tot() {
     RooWorkspace *wsp = new RooWorkspace("wsp", "wsp");
     wsp->import(pdf_all);
     wsp->writeToFile("Model_4D_tot.root");
+    // Compute total cross section
+    const double L_int = 61.31;          // fb^-1
+    const double B_Jpsi = 0.05961;       // B(J/psi -> mu mu)
+    const double B_psi2S = 0.00794;      // B(psi(2S) -> ee)
+    double norm = 1e-3 / (L_int * B_Jpsi * B_psi2S);
+    double sigma_tot = n_P_P.getVal() * norm;
+    double sigma_tot_err = n_P_P.getError() * norm;
+
+    // Write results to file
+    ofstream fout("fit_results_4D_tot.txt");
+    fout << "# 4D total fit results" << endl;
+    fout << "# L_int = " << L_int << " fb^-1" << endl;
+    fout << "# B(J/psi -> mu mu) = " << B_Jpsi << endl;
+    fout << "# B(psi(2S) -> ee) = " << B_psi2S << endl;
+    fout << "fit_status " << res->status() << endl;
+    fout << "n_P_P " << n_P_P.getVal() << " " << n_P_P.getError() << endl;
+    fout << "sigma_tot_pb " << sigma_tot << " " << sigma_tot_err << endl;
+    fout.close();
+
     // Log message to screen
-    cout<<"Status: "<<res->status()<<endl;
-    cout<<"Event yield: "<<n_P_P.getVal()<<" +/- "<<n_P_P.getError()<<endl;
+    cout << "Status: " << res->status() << endl;
+    cout << "Event yield: " << n_P_P.getVal() << " +/- " << n_P_P.getError() << endl;
+    cout << "sigma_tot [pb]: " << sigma_tot << " +/- " << sigma_tot_err << " (stat only)" << endl;
+    cout << "Results written to fit_results_4D_tot.txt" << endl;
     return;
 }
