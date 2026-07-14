@@ -58,34 +58,51 @@ void Tpl_Fit() {
         {0.0, 0.4, 0.8, 1.2, 1.6, 2.0}
         , {0, 8, 16, 24, 32, 40, 80}
     };
-    // Differential cross sections
-    vector<vector<double>> xSec = {
-        {632.201, 129.542, 72.1842, 83.3564, 12.3596, 19.4357}, {653.633, 60.9626, 46.7251, 60.4103, 138.908}, {796.426, 251.365, 236.285, 61.7321, 76.9698},
-        {472.951, 296.483, 354.145, 222.521, 79.273}
-        , {250.092, 204.513, 386.399, 357.97, 138.75, 100.456}
-    };
-    // Statistical uncertainties
-    vector<vector<double>> sta = {
-        {28.0054, 15.3417, 11.7034, 10.0083, 5.56255, 7.32121}, {30.6741, 9.6205, 9.08513, 10.8043, 16.3403}, {35.0803, 22.6198, 20.7751, 15.9625, 15.5374},
-        {28.6379, 25.4596, 25.508, 19.7277, 13.0565}
-        , {20.6896, 22.3792, 26.5792, 26.183, 15.1611, 12.4401}
-    };
-    for(int i = 0; i < varNum; i++) {
-        for(int j = 0; j < binNum[i]; j++) {
-            xSec[i][j] *= 1e-3 / (61.31 * 0.05961 * 0.00794) / (bins[i][j + 1] - bins[i][j]);  // ee BR for psi(2S)
-            sta[i][j] *= 1e-3 / (61.31 * 0.05961 * 0.00794) / (bins[i][j + 1] - bins[i][j]);
+    // Differential cross section yields: read from Fit_4D_diff output file
+    // (instead of hardcoding — see AGENTS.md "中间产物文件格式兼容规则")
+    const double normFactor = 1e-3 / (61.31 * 0.05961 * 0.00794);  // ee BR for psi(2S)
+    vector<vector<double>> xSec, sta;
+    for (int i = 0; i < varNum; i++) {
+        xSec.push_back(vector<double>(binNum[i], 0));
+        sta.push_back(vector<double>(binNum[i], 0));
+    }
+    ifstream fdiff("fit_results_4D_diff.txt");
+    if (fdiff.is_open()) {
+        string line;
+        while (getline(fdiff, line)) {
+            if (line.empty() || line[0] == '#') continue;
+            istringstream iss(line);
+            string vname;
+            double vmin, vmax, yield, yerr;
+            if (!(iss >> vname >> vmin >> vmax >> yield >> yerr)) continue;
+            for (int i = 0; i < varNum; i++) {
+                if (vname != varName[i]) continue;
+                for (int j = 0; j < binNum[i]; j++) {
+                    if (fabs(vmin - bins[i][j]) < 1e-9 && fabs(vmax - bins[i][j+1]) < 1e-9) {
+                        xSec[i][j] = yield * normFactor / (bins[i][j+1] - bins[i][j]);
+                        sta[i][j] = yerr * normFactor / (bins[i][j+1] - bins[i][j]);
+                        break;
+                    }
+                }
+                break;
+            }
         }
+        fdiff.close();
+    } else {
+        cerr << "Warning: fit_results_4D_diff.txt not found. Run Fit_4D_diff first." << endl;
     }
     // Systematic uncertainties
+    // TODO: sys3, sys4 should also be read from systematic evaluation output
+    // Currently kept as constants for compatibility; update after C9 (closure) is done.
     const double sys1 = 0.0283, sys2 = 0.025;
     const vector<vector<double>> sys3 = {
         {0.00210645, 0.0180457, 0.0126121, 0.0126625, -0.00438329, 0.0115217}, {0.00959917, 0.0238948, 0.0133999, -0.00404647, 0.00467304},
-        {0.0232711, 0.00839292, -0.000209678, 0.0291752, -0.00383268}, 
+        {0.0232711, 0.00839292, -0.000209678, 0.0291752, -0.00383268},
         {0.00551673, 0.00308563, 0.0243919, 0.00997864, 0.0170281}
         , {-0.000628592, 0.00329366, 0.013584, 0.0224671, -0.0165127, 0.0444984}
     }, sys4 = {
         {0.074069, 0.079177, 0.123122, 0.108043, 0.0917305, 0.433594}, {0.0469346, 0.0603078, 0.0501868, 0.0936282, 0.088843},
-        {0.0501369, 0.106403, 0.104383, 0.0947623, 0.0210585}, 
+        {0.0501369, 0.106403, 0.104383, 0.0947623, 0.0210585},
         {0.136552, 0.0843728, 0.0157296, 0.0357353, 0.0430499}
         , {0.0432611, 0.0779885, 0.0144281, 0.0646486, 0.111898, 0.138225}
     };

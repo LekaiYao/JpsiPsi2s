@@ -1,4 +1,5 @@
 #include "Plot_4D.hpp"
+#include <fstream>
 
 void Fit_4D_diff(string var, double vmin, double vmax) {
     // Define variables
@@ -65,5 +66,12 @@ void Fit_4D_diff(string var, double vmin, double vmax) {
 
     // Save parameters to file
     wsp->writeToFile("Model_4D_diff.root");
+
+    // Append yield result to summary file
+    ofstream fout("fit_results_4D_diff.txt", ios::app);
+    fout << var << " " << vmin << " " << vmax << " "
+         << wsp->var("n_P_P")->getVal() << " " << wsp->var("n_P_P")->getError() << endl;
+    fout.close();
+
     return;
 }
