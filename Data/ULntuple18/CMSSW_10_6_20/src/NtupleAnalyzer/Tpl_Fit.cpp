@@ -13,6 +13,8 @@
 #include "RooHistPdf.h"
 #include "RooCategory.h"
 #include "RooSimultaneous.h"
+#include <fstream>
+#include <sstream>
 
 using namespace std;
 using namespace RooFit;
@@ -209,12 +211,64 @@ void Tpl_Fit() {
         plot_temp(varName[i] + "_simul", *(var[i]), dh[i], dhSPS[i], dhDPS[i], frac.getVal(), n_var[i]->getVal());
     }
     simPdf.getVariables()->Print("v");
-    // Output to screen
-    for(int i = 0; i < varNum; i++) {
-        cout<<varName[i]<<": fSPS="<<fSPS[i]<<endl;
-        for(int j = 0; j < binNum[i]; j++) cout<<xSec[i][j]<<"+/-"<<sta[i][j]<<"+/-"<<(xSec[i][j] * combError(sys1, sys2, sys3[i][j], sys4[i][j]))<<endl;
-        cout<<endl;
+
+    // Read sigma_tot from Fit_4D_tot result file
+    double sigma_tot = 0, sigma_tot_err = 0;
+    ifstream fres("fit_results_4D_tot.txt");
+    if (fres.is_open()) {
+        string line;
+        while (getline(fres, line)) {
+            if (line.rfind("sigma_tot_pb", 0) == 0) {
+                istringstream iss(line);
+                string tag;
+                iss >> tag >> sigma_tot >> sigma_tot_err;
+                break;
+            }
+        }
+        fres.close();
     }
-    cout<<endl;
+
+    // Compute sigma_SPS, sigma_DPS from simultaneous fit
+    double fSPS_simul = frac.getVal();
+    double sigma_SPS = fSPS_simul * sigma_tot;
+    double sigma_SPS_err = fSPS_simul * sigma_tot_err;  // stat err propagation (leading order)
+    double sigma_DPS = (1.0 - fSPS_simul) * sigma_tot;
+    double sigma_DPS_err = (1.0 - fSPS_simul) * sigma_tot_err;
+
+    // Write results to file
+    ofstream fout("fit_results_Tpl_Fit.txt");
+    fout << "# Template fit results (SPS/DPS)" << endl;
+    fout << "# simultaneous variables: delta_y, delta_phi" << endl;
+    fout << "# sigma_tot [pb] = " << sigma_tot << " +/- " << sigma_tot_err << " (from Fit_4D_tot)" << endl;
+    fout << "fSPS_simul " << fSPS_simul << endl;
+    fout << "fDPS_simul " << (1.0 - fSPS_simul) << endl;
+    fout << "sigma_SPS_pb " << sigma_SPS << " " << sigma_SPS_err << endl;
+    fout << "sigma_DPS_pb " << sigma_DPS << " " << sigma_DPS_err << endl;
+    fout << "# Per-variable fSPS and dsigma/dX [pb] +- stat +- sys" << endl;
+    for (int i = 0; i < varNum; i++) {
+        fout << varName[i] << " fSPS " << fSPS[i] << endl;
+        for (int j = 0; j < binNum[i]; j++) {
+            fout << "  bin" << j << " " << xSec[i][j] << " " << sta[i][j]
+                 << " " << (xSec[i][j] * combError(sys1, sys2, sys3[i][j], sys4[i][j])) << endl;
+        }
+    }
+    fout.close();
+
+    // Output to screen
+    cout << endl;
+    cout << "=== Template Fit Results ===" << endl;
+    cout << "Simultaneous fit (delta_y + delta_phi): fSPS = " << fSPS_simul << endl;
+    if (sigma_tot > 0) {
+        cout << "sigma_SPS [pb] = " << sigma_SPS << " +/- " << sigma_SPS_err << " (stat only)" << endl;
+        cout << "sigma_DPS [pb] = " << sigma_DPS << " +/- " << sigma_DPS_err << " (stat only)" << endl;
+    }
+    for (int i = 0; i < varNum; i++) {
+        cout << varName[i] << ": fSPS=" << fSPS[i] << endl;
+        for (int j = 0; j < binNum[i]; j++)
+            cout << "  " << xSec[i][j] << " +/- " << sta[i][j]
+                 << " +/- " << (xSec[i][j] * combError(sys1, sys2, sys3[i][j], sys4[i][j])) << endl;
+        cout << endl;
+    }
+    cout << "Results written to fit_results_Tpl_Fit.txt" << endl;
     return;
 }
