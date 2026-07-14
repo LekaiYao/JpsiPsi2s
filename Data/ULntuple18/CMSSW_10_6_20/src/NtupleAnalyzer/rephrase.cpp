@@ -60,9 +60,9 @@ class Process {
         int nEvent = inTree->GetEntries();
         // Define input tree variables
         vector<Double_t> *REmu_pt = 0;
-        vector<Double_t> *REJpsi_pt = 0, *REJpsi_eta = 0, *REJpsi_y = 0, *REJpsi_phi = 0, *REJpsi_mass = 0, *REJpsi_ctau = 0;//, *REJpsi_sigLxy = 0;
+        vector<Double_t> *REJpsi_pt = 0, *REJpsi_eta = 0, *REJpsi_y = 0, *REJpsi_phi = 0, *REJpsi_mass = 0, *REJpsi_ctau = 0, *REJpsi_sigLxy = 0;
         vector<int> *REJpsi_muId1 = 0;//, *REJpsi_muId2 = 0;
-        vector<Double_t> *REpsi2S_pt = 0, *REpsi2S_eta = 0, *REpsi2S_y = 0, *REpsi2S_phi = 0, *REpsi2S_mass = 0, *REpsi2S_ctau = 0;//, *REpsi2S_sigLxy = 0;
+        vector<Double_t> *REpsi2S_pt = 0, *REpsi2S_eta = 0, *REpsi2S_y = 0, *REpsi2S_phi = 0, *REpsi2S_mass = 0, *REpsi2S_ctau = 0, *REpsi2S_sigLxy = 0;
         vector<int> *REpsi2S_muId1 = 0;//, *REpsi2S_muId2 = 0;
         vector<Double_t> *REevt_fourMuMass = 0, *REevt_vtxProb = 0;//, *REevt_d = 0, *REevt_L1muPtMax = 0;
         vector<int> *REevt_JpsiId = 0, *REevt_psi2SId = 0;
@@ -75,7 +75,7 @@ class Process {
         inTree->SetBranchAddress("REJpsi_phi", &REJpsi_phi);
         inTree->SetBranchAddress("REJpsi_mass", &REJpsi_mass);
         inTree->SetBranchAddress("REJpsi_ctau", &REJpsi_ctau);
-        // inTree->SetBranchAddress("REJpsi_sigLxy", &REJpsi_sigLxy);
+        inTree->SetBranchAddress("REJpsi_sigLxy", &REJpsi_sigLxy);
         inTree->SetBranchAddress("REJpsi_muId1", &REJpsi_muId1);
         // inTree->SetBranchAddress("REJpsi_muId2", &REJpsi_muId2);
         inTree->SetBranchAddress("REpsi2S_pt", &REpsi2S_pt);
@@ -84,7 +84,7 @@ class Process {
         inTree->SetBranchAddress("REpsi2S_phi", &REpsi2S_phi);
         inTree->SetBranchAddress("REpsi2S_mass", &REpsi2S_mass);
         inTree->SetBranchAddress("REpsi2S_ctau", &REpsi2S_ctau);
-        // inTree->SetBranchAddress("REpsi2S_sigLxy", &REpsi2S_sigLxy);
+        inTree->SetBranchAddress("REpsi2S_sigLxy", &REpsi2S_sigLxy);
         inTree->SetBranchAddress("REpsi2S_muId1", &REpsi2S_muId1);
         // inTree->SetBranchAddress("REpsi2S_muId2", &REpsi2S_muId2);
         inTree->SetBranchAddress("REevt_fourMuMass", &REevt_fourMuMass);
@@ -150,14 +150,14 @@ class Process {
                 // mu_pt.push_back(temp_mu_pt);
                 Jpsi_mass.push_back(REJpsi_mass->at(JpsiId));
                 Jpsi_ctau.push_back(REJpsi_ctau->at(JpsiId));
-                // Jpsi_sigLxy.push_back(REJpsi_sigLxy->at(JpsiId));
+                Jpsi_sigLxy.push_back(REJpsi_sigLxy->at(JpsiId));
                 Jpsi_pt.push_back(REJpsi_pt->at(JpsiId));
                 Jpsi_y.push_back(REJpsi_y->at(JpsiId));
                 // Jpsi_eta.push_back(REJpsi_eta->at(JpsiId));
                 // Jpsi_phi.push_back(REJpsi_phi->at(JpsiId));
                 psi2S_mass.push_back(REpsi2S_mass->at(psi2SId));
                 psi2S_ctau.push_back(REpsi2S_ctau->at(psi2SId));
-                // psi2S_sigLxy.push_back(REpsi2S_sigLxy->at(psi2SId));
+                psi2S_sigLxy.push_back(REpsi2S_sigLxy->at(psi2SId));
                 psi2S_pt.push_back(REpsi2S_pt->at(psi2SId));
                 psi2S_y.push_back(REpsi2S_y->at(psi2SId));
                 // psi2S_eta.push_back(REpsi2S_eta->at(psi2SId));
@@ -181,8 +181,8 @@ class Process {
     public:
     int totEvent = 0, hltEvent = 0, vtxEvent = 0, totEntry = 0;
     // vector<vector<Double_t>> mu_pt;
-    vector<Double_t> Jpsi_mass, Jpsi_ctau, Jpsi_pt, Jpsi_y;//, Jpsi_sigLxy, Jpsi_eta, Jpsi_phi;
-    vector<Double_t> psi2S_mass, psi2S_ctau, psi2S_pt, psi2S_y;//, psi2S_sigLxy, psi2S_eta, psi2S_phi;
+    vector<Double_t> Jpsi_mass, Jpsi_ctau, Jpsi_pt, Jpsi_y, Jpsi_sigLxy;//, Jpsi_eta, Jpsi_phi;
+    vector<Double_t> psi2S_mass, psi2S_ctau, psi2S_pt, psi2S_y, psi2S_sigLxy;//, psi2S_eta, psi2S_phi;
     vector<Double_t> evt_weight, evt_vtxProb;//, evt_d;
     vector<Double_t> evt_mass, evt_y, evt_pt, delta_y, delta_phi, evt_mass2;
     void readMatrix() {
@@ -293,22 +293,22 @@ void rephrase() {
     TTree *outTree = new TTree("data", "data");
     // Define output tree variables
     // vector<Double_t> mu_pt;
-    Double_t Jpsi_mass, Jpsi_ctau, Jpsi_pt, Jpsi_y;//, Jpsi_sigLxy, Jpsi_eta, Jpsi_phi;
-    Double_t psi2S_mass, psi2S_ctau, psi2S_pt, psi2S_y;//, psi2S_sigLxy, psi2S_eta, psi2S_phi;
+    Double_t Jpsi_mass, Jpsi_ctau, Jpsi_pt, Jpsi_y, Jpsi_sigLxy;//, Jpsi_eta, Jpsi_phi;
+    Double_t psi2S_mass, psi2S_ctau, psi2S_pt, psi2S_y, psi2S_sigLxy;//, psi2S_eta, psi2S_phi;
     Double_t evt_weight, evt_vtxProb;//, evt_d;
     Double_t evt_mass, evt_y, evt_pt, delta_y, delta_phi, evt_mass2;
     // Set output tree SetBranchAddress address
     // outTree->Branch("mu_pt", &mu_pt);
     outTree->Branch("Jpsi_mass", &Jpsi_mass, "Jpsi_mass/D");
     outTree->Branch("Jpsi_ctau", &Jpsi_ctau, "Jpsi_ctau/D");
-    // outTree->Branch("Jpsi_sigLxy", &Jpsi_sigLxy, "Jpsi_sigLxy/D");
+    outTree->Branch("Jpsi_sigLxy", &Jpsi_sigLxy, "Jpsi_sigLxy/D");
     outTree->Branch("Jpsi_pt", &Jpsi_pt, "Jpsi_pt/D");
     outTree->Branch("Jpsi_y", &Jpsi_y, "Jpsi_y/D");
     // outTree->Branch("Jpsi_eta", &Jpsi_eta, "Jpsi_eta/D");
     // outTree->Branch("Jpsi_phi", &Jpsi_phi, "Jpsi_phi/D");
     outTree->Branch("psi2S_mass", &psi2S_mass, "psi2S_mass/D");
     outTree->Branch("psi2S_ctau", &psi2S_ctau, "psi2S_ctau/D");
-    // outTree->Branch("psi2S_sigLxy", &psi2S_sigLxy, "psi2S_sigLxy/D");
+    outTree->Branch("psi2S_sigLxy", &psi2S_sigLxy, "psi2S_sigLxy/D");
     outTree->Branch("psi2S_pt", &psi2S_pt, "psi2S_pt/D");
     outTree->Branch("psi2S_y", &psi2S_y, "psi2S_y/D");
     // outTree->Branch("psi2S_eta", &psi2S_eta, "psi2S_eta/D");
@@ -328,14 +328,14 @@ void rephrase() {
         // mu_pt = process.mu_pt[i];
         Jpsi_mass = process.Jpsi_mass[i];
         Jpsi_ctau = process.Jpsi_ctau[i];
-        // Jpsi_sigLxy = process.Jpsi_sigLxy[i];
+        Jpsi_sigLxy = process.Jpsi_sigLxy[i];
         Jpsi_pt = process.Jpsi_pt[i];
         Jpsi_y = process.Jpsi_y[i];
         // Jpsi_eta = process.Jpsi_eta[i];
         // Jpsi_phi = process.Jpsi_phi[i];
         psi2S_mass = process.psi2S_mass[i];
         psi2S_ctau = process.psi2S_ctau[i];
-        // psi2S_sigLxy = process.psi2S_sigLxy[i];
+        psi2S_sigLxy = process.psi2S_sigLxy[i];
         psi2S_pt = process.psi2S_pt[i];
         psi2S_y = process.psi2S_y[i];
         // psi2S_eta = process.psi2S_eta[i];
