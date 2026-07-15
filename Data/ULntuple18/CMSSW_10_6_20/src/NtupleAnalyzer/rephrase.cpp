@@ -105,18 +105,17 @@ class Process {
             // Apply cut: pass trigger matching && dimuon pT within [10, 40]
             for(int j = (int)REevt_matchTrg->size() - 1; j >= 0; j--) {
                 if(!REevt_passHLT->at(j)) continue;
-                // if(!REevt_matchTrg->at(j)) continue;
+                if(!REevt_matchTrg->at(j)) continue;
                 // if(REevt_vtxProb->at(j) == 0) continue;
                 int JpsiId = REevt_JpsiId->at(j), psi2SId = REevt_psi2SId->at(j);
                 if(REJpsi_pt->at(JpsiId) > 40 || REJpsi_pt->at(JpsiId) < 10) continue;
                 if(REpsi2S_pt->at(psi2SId) > 40 || REpsi2S_pt->at(psi2SId) < 10) continue;
                 if(!REevt_samePV->at(j)) continue;
-                //// Choose one from following cut:
-                // Additional cut for No.1 L1 muon pT
-                // if(REevt_L1muPtMax->at(j) < 5.5) continue;
-                // Additional cut for No.1 muon pT
-                // if(REmu_pt->at(REJpsi_muId1->at(JpsiId)) < 5.5 && REmu_pt->at(REpsi2S_muId1->at(psi2SId)) < 5.5) continue;
-                ////
+                // muPtMax > 5.5 GeV: max RECO muon pT (AN §3.1 condition ③, JJ-aligned)
+                double muPtMax_val = 0;
+                for (unsigned k = 0; k < REmu_pt->size(); k++)
+                    if (REmu_pt->at(k) > muPtMax_val) muPtMax_val = REmu_pt->at(k);
+                if (muPtMax_val <= 5.5) continue;
                 // Differential cross-section bin selection
                 TLorentzVector JpsiLV, psi2SLV;
                 JpsiLV.SetPtEtaPhiM(REJpsi_pt->at(JpsiId), REJpsi_eta->at(JpsiId), REJpsi_phi->at(JpsiId), REJpsi_mass->at(JpsiId));

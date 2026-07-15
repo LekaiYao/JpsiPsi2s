@@ -106,7 +106,8 @@ for t in inTrees:
               "GEevt_passHLT"]:
         t.SetBranchStatus(b, 1)
     if is_v2:
-        for b in ["REevt_fourMuMass", "REevt_matchTrg", "REmu_pt"]:
+        for b in ["REevt_fourMuMass", "REevt_matchTrg", "REmu_pt",
+                  "REevt_samePV", "REevt_fourMuFit"]:
             t.SetBranchStatus(b, 1)
     else:
         for b in ["GEevt_matchTrg", "GEevt_muPtMax"]:
@@ -180,18 +181,34 @@ for inTree in inTrees:
                 uchar_bool(inTree.GEpsi2S_passVtx)):
             continue
 
+        # Event-level quality checks (JJ-aligned, NtupleMaker v2)
+        evt_ok = True
+        if is_v2:
+            n_combo = inTree.REevt_fourMuMass.size()
+            # Require at least one combo with samePV + fourMuFit
+            has_good_combo = False
+            for j in range(n_combo):
+                if inTree.REevt_samePV[j] and inTree.REevt_fourMuFit[j]:
+                    has_good_combo = True
+                    break
+            if not has_good_combo:
+                evt_ok = False
+        if not evt_ok:
+            continue
+
         mVtx_evt[iPt_p][iPt_j] += 1
 
         hlt_ok = uchar_bool(inTree.GEevt_passHLT)
         if hlt_ok:
             mHlt_evt[iPt_p][iPt_j] += 1
 
-        # Trigger match: RE vectors (v2) or GE scalars (old)
+        # Trigger match + muPtMax: RE vectors (v2) or GE scalars (old)
         trg_ok = False
         if is_v2:
-            n_combo = inTree.REevt_fourMuMass.size()
             for j in range(n_combo):
-                if inTree.REevt_matchTrg[j]:
+                if (inTree.REevt_matchTrg[j] and
+                    inTree.REevt_samePV[j] and
+                    inTree.REevt_fourMuFit[j]):
                     mu_pt_max = max(inTree.REmu_pt) if inTree.REmu_pt.size() > 0 else 0
                     if mu_pt_max > 5.5:
                         trg_ok = True
