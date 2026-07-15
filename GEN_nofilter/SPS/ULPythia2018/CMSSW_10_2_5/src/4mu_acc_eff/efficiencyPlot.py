@@ -60,10 +60,10 @@ for ptIdx in range(len(ptBin) - 1):
         for inTree in inTrees:
             nBin_Jpsi += inTree.GetEntries(binCut_Jpsi + fidCut_psi2S)# evtMassCut + 
             nEta_Jpsi += inTree.GetEntries(binCut_Jpsi + fidCut_psi2S + etaCut_Jpsi)
-            nPt_Jpsi += inTree.GetEntries(binCut_Jpsi + fidCut_psi2S + etaCut_Jpsi + " && {}[0] > 3.5 && {}[1] > 3.5".format(rJpsi_mupt, rJpsi_mupt))
+            nPt_Jpsi += inTree.GetEntries(binCut_Jpsi + fidCut_psi2S + etaCut_Jpsi + " && {}[0] > 3.6 && {}[1] > 3.6".format(rJpsi_mupt, rJpsi_mupt))
             nBin_psi2S += inTree.GetEntries(binCut_psi2S + fidCut_Jpsi)
             nEta_psi2S += inTree.GetEntries(binCut_psi2S + fidCut_Jpsi + etaCut_psi2S)
-            nPt_psi2S += inTree.GetEntries(binCut_psi2S + fidCut_Jpsi + etaCut_psi2S + " && {}[0] > 3.5 && {}[1] > 3.5".format(rpsi2S_mupt, rpsi2S_mupt))
+            nPt_psi2S += inTree.GetEntries(binCut_psi2S + fidCut_Jpsi + etaCut_psi2S + " && {}[0] > 3.6 && {}[1] > 3.6".format(rpsi2S_mupt, rpsi2S_mupt))
         print("\033[7mProcessing pt-y bin: {}, {}\033[0m".format(ptBin[ptIdx], yBin[yIdy]))
         print("[\033[32mJ/psi\033[0m] PtEta/Eta/Total = %d/%d/%d" % (nPt_Jpsi, nEta_Jpsi, nBin_Jpsi))
         print("[\033[31mpsi(2S)\033[0m] PtEta/Eta/Total = %d/%d/%d" % (nPt_psi2S, nEta_psi2S, nBin_psi2S))
