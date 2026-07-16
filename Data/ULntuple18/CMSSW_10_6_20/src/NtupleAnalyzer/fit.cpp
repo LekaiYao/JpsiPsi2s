@@ -44,7 +44,7 @@ void fit() {
     variables.add(Jpsi_ctau);
     variables.add(psi2S_ctau);
     variables.add(evt_weight);
-    TFile *dataFile = new TFile("WeightData_prime.root", "READ");
+    TFile *dataFile = new TFile("WeightData.root", "READ");
     // TFile *dataFile = new TFile("WeightDPS.root", "READ");
     // TFile *dataFile = new TFile("WeightSPS.root", "READ");
     // TFile *dataFile = new TFile("WeightBdecaySmall.root", "READ");

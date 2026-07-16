@@ -19,7 +19,7 @@ void Fit_4D_tot_sigLxy() {
     variables.add(Jpsi_sigLxy);
     variables.add(psi2S_sigLxy);
     variables.add(evt_weight);
-    TFile *dataFile = new TFile("WeightData_prime.root", "READ");
+    TFile *dataFile = new TFile("WeightData.root", "READ");
     TTree *dataTree = (TTree*)dataFile->Get("data");
     RooDataSet *data = new RooDataSet("data", "data", dataTree, variables, "", "evt_weight");
 

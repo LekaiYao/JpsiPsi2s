@@ -12,7 +12,7 @@ using namespace std;
 void para_plot() {
     // Configuration
     const int nFiles = 4, nVars = 4;
-    const string files[] = {"WeightData_prime.root", "WeightSPS.root", "WeightDPS.root", "WeightBdecay.root"};
+    const string files[] = {"WeightData.root", "WeightSPS.root", "WeightDPS.root", "WeightBdecay.root"};
     // Setting-1 nVars=4
     // const string vars[] = {"Jpsi_pt", "psi2S_pt", "Jpsi_y", "psi2S_y"};
     // const double uppers[] = {40, 40, 2, 2}, lowers[] = {10, 10, -2, -2};

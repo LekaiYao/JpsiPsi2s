@@ -35,7 +35,7 @@ void nopre_fit() {
     variables.add(Jpsi_ctau);
     variables.add(psi2S_ctau);
     variables.add(evt_weight);
-    TFile *dataFile = new TFile("WeightData_prime.root", "READ");
+    TFile *dataFile = new TFile("WeightData.root", "READ");
     TTree *dataTree = (TTree*)dataFile->Get("data");
     RooDataSet *data = new RooDataSet("data", "data", dataTree, variables, "", "evt_weight");
     

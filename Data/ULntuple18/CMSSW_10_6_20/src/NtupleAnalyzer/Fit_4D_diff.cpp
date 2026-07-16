@@ -18,7 +18,7 @@ void Fit_4D_diff(string var, double vmin, double vmax) {
     variables.add(kine);
     // Read file and apply cut
     string sel = var + " > " + to_string(vmin) + " && " + var + " < " + to_string(vmax);
-    TFile *dataFile = new TFile("WeightData_prime.root", "READ");
+    TFile *dataFile = new TFile("WeightData.root", "READ");
     TTree *dataTree = (TTree*)dataFile->Get("data");
     RooDataSet *data = new RooDataSet("data", "data", dataTree, variables, sel.c_str(), "evt_weight");
     

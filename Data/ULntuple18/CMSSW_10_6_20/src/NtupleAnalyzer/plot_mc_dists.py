@@ -8,7 +8,8 @@ For each SPS subdirectory under SPS_BASE containing .root files, produce
 Usage:
     python3 plot_mc_dists.py                     # scan all SPS subdirs
     python3 plot_mc_dists.py --sps-dir=ggpsi1psi2  # single SPS folder only
-    python3 plot_mc_dists.py --reco              # use RECO-level variables
+    python3 plot_mc_dists.py --gen               # GEN-level (opt-in)
+    python3 plot_mc_dists.py --eff               # template-fit variables from UnweightMC/
 Output: fig/mc_dists/<sps_folder_name>/
 """
 
@@ -20,13 +21,20 @@ SPS_BASE  = "/eos/home-l/leyao/26JP/Ntuple/SPS"
 DPS_FILE  = "/eos/home-l/leyao/26JP/Ntuple/DPS/filter3p5/v2_set1.root"
 TREE_NAME = "rootuple/oniaTree"
 BASE_OUT  = "fig/mc_dists/"
-USE_RECO  = "--reco" in sys.argv
+USE_RECO  = "--gen" not in sys.argv and "--eff" not in sys.argv   # default: RECO level
+USE_GEN   = "--gen" in sys.argv
+USE_EFF   = "--eff" in sys.argv
 
 # Which SPS folder(s) to process
 SPS_DIR = None
 for a in sys.argv[1:]:
     if a.startswith("--sps-dir="):
         SPS_DIR = a.split("=", 1)[1]
+
+if USE_EFF:
+    SPS_BASE  = "UnweightMC"
+    DPS_FILE  = "UnweightMC/UnweightDPS.root"
+    TREE_NAME = "data"
 
 os.makedirs(BASE_OUT, exist_ok=True)
 
@@ -91,61 +99,73 @@ def extract(files, label):
         print(f"  ERROR: 0 entries for {label}")
         return None
 
-    chain.SetBranchStatus("*", 0)
-    for b in GE_BRANCHES + RECO_BRANCHES:
-        chain.SetBranchStatus(b, 1)
-
     vals = {k: [] for k in BINS}
-    n_pass = 0
 
-    for i in range(n_total):
-        chain.GetEntry(i)
-        if not (uchar_bool(chain.GEevt_valid) and uchar_bool(chain.GEevt_passAcc)
-                and chain.GEevt_fourMuMass > 7.5):
-            continue
+    if USE_EFF:
+        # ── Eff mode: read pre-computed template-fit variables from data tree ──
+        chain.SetBranchStatus("*", 0)
+        chain.SetBranchStatus("delta_y", 1);   chain.SetBranchStatus("delta_phi", 1)
+        chain.SetBranchStatus("evt_mass", 1);  chain.SetBranchStatus("evt_y", 1)
+        chain.SetBranchStatus("evt_pt", 1)
+        for i in range(n_total):
+            chain.GetEntry(i)
+            vals["delta_y"].append(chain.delta_y)
+            vals["delta_phi"].append(chain.delta_phi / np.pi)  # tree stores in rad
+            vals["evt_mass"].append(chain.evt_mass)
+            vals["evt_y"].append(chain.evt_y)
+            vals["evt_pt"].append(chain.evt_pt)
+        n_pass = n_total
+    else:
+        # ── GEN/RECO mode: read raw ntuple, compute four-vectors ──
+        chain.SetBranchStatus("*", 0)
+        for b in GE_BRANCHES + RECO_BRANCHES:
+            chain.SetBranchStatus(b, 1)
 
-        # Kinematics: RECO if available and requested, else GEN
-        if USE_RECO and chain.REevt_fourMuMass.size() > 0:
-            j_pt = chain.REJpsi_pt[0];   j_y = chain.REJpsi_y[0]
-            j_phi = chain.REJpsi_phi[0]; j_m = chain.REJpsi_mass[0]
-            p_pt = chain.REpsi2S_pt[0];  p_y = chain.REpsi2S_y[0]
-            p_phi = chain.REpsi2S_phi[0]; p_m = chain.REpsi2S_mass[0]
-            j_eta, p_eta = j_y, p_y
-        else:
-            j_pt = chain.GEJpsi_pt;   j_eta = chain.GEJpsi_eta
-            j_phi = chain.GEJpsi_phi; j_m   = chain.GEJpsi_mass
-            p_pt = chain.GEpsi2S_pt;  p_eta = chain.GEpsi2S_eta
-            p_phi = chain.GEpsi2S_phi; p_m  = chain.GEpsi2S_mass
+        n_pass = 0
+        for i in range(n_total):
+            chain.GetEntry(i)
+            if not (uchar_bool(chain.GEevt_valid) and uchar_bool(chain.GEevt_passAcc)
+                    and chain.GEevt_fourMuMass > 7.5):
+                continue
 
-        # Fiducial cuts
-        if not (10 < j_pt < 40 and -2 < j_eta < 2): continue
-        if not (10 < p_pt < 40 and -2 < p_eta < 2): continue
+            if USE_RECO and chain.REevt_fourMuMass.size() > 0:
+                j_pt = chain.REJpsi_pt[0];   j_y = chain.REJpsi_y[0]
+                j_phi = chain.REJpsi_phi[0]; j_m = chain.REJpsi_mass[0]
+                p_pt = chain.REpsi2S_pt[0];  p_y = chain.REpsi2S_y[0]
+                p_phi = chain.REpsi2S_phi[0]; p_m = chain.REpsi2S_mass[0]
+                j_eta, p_eta = j_y, p_y
+            else:
+                j_pt = chain.GEJpsi_pt;   j_eta = chain.GEJpsi_eta
+                j_phi = chain.GEJpsi_phi; j_m   = chain.GEJpsi_mass
+                p_pt = chain.GEpsi2S_pt;  p_eta = chain.GEpsi2S_eta
+                p_phi = chain.GEpsi2S_phi; p_m  = chain.GEpsi2S_mass
 
-        # RECO-only cuts
-        if USE_RECO:
-            n_combo = chain.REevt_fourMuMass.size()
-            if n_combo == 0: continue
-            has_hlt = any(chain.REevt_passHLT[j] for j in range(n_combo))
-            has_trg = any(chain.REevt_matchTrg[j] for j in range(n_combo))
-            mu_pt_max = max(chain.REmu_pt) if chain.REmu_pt.size() > 0 else 0
-            if not (has_hlt and has_trg and mu_pt_max > 5.5): continue
+            if not (10 < j_pt < 40 and -2 < j_eta < 2): continue
+            if not (10 < p_pt < 40 and -2 < p_eta < 2): continue
 
-        # Build four-vectors
-        jv = ROOT.TLorentzVector()
-        jv.SetPtEtaPhiM(j_pt, j_eta, j_phi, j_m)
-        pv = ROOT.TLorentzVector()
-        pv.SetPtEtaPhiM(p_pt, p_eta, p_phi, p_m)
-        sv = jv + pv
+            if USE_RECO:
+                n_combo = chain.REevt_fourMuMass.size()
+                if n_combo == 0: continue
+                has_hlt = any(chain.REevt_passHLT[j] for j in range(n_combo))
+                has_trg = any(chain.REevt_matchTrg[j] for j in range(n_combo))
+                mu_pt_max = max(chain.REmu_pt) if chain.REmu_pt.size() > 0 else 0
+                if not (has_hlt and has_trg and mu_pt_max > 5.5): continue
 
-        vals["delta_y"].append(abs(jv.Rapidity() - pv.Rapidity()))
-        vals["delta_phi"].append(
-            abs(ROOT.TVector2.Phi_mpi_pi(jv.Phi() - pv.Phi())) / np.pi)
-        vals["evt_mass"].append(sv.M())
-        vals["evt_y"].append(abs(sv.Rapidity()))
-        vals["evt_pt"].append(sv.Pt())
-        n_pass += 1
+            jv = ROOT.TLorentzVector()
+            jv.SetPtEtaPhiM(j_pt, j_eta, j_phi, j_m)
+            pv = ROOT.TLorentzVector()
+            pv.SetPtEtaPhiM(p_pt, p_eta, p_phi, p_m)
+            sv = jv + pv
 
-    print(f"  {label}: {n_pass} / {n_total} events pass cuts")
+            vals["delta_y"].append(abs(jv.Rapidity() - pv.Rapidity()))
+            vals["delta_phi"].append(
+                abs(ROOT.TVector2.Phi_mpi_pi(jv.Phi() - pv.Phi())) / np.pi)
+            vals["evt_mass"].append(sv.M())
+            vals["evt_y"].append(abs(sv.Rapidity()))
+            vals["evt_pt"].append(sv.Pt())
+            n_pass += 1
+
+    print(f"  {label}: {n_pass} / {n_total} events")
     return {"label": label, "n": n_pass, "vals": vals}
 
 # ── Plot ─────────────────────────────────────────────────────
@@ -291,54 +311,93 @@ if __name__ == "__main__":
     ROOT.gStyle.SetOptStat(0)
     ROOT.gStyle.SetOptTitle(0)
 
-    # Find SPS folders
-    if SPS_DIR:
-        sps_dirs = [SPS_DIR]
+    if USE_EFF:
+        # ── Eff mode: read from UnweightMC/ ──────────────────
+        BASE_OUT = "fig/mc_dists/eff/"
+        os.makedirs(BASE_OUT, exist_ok=True)
+
+        # Find SPS files: UnweightMC/Unweight_*.root (not DPS)
+        all_unweight = sorted(glob.glob(os.path.join(SPS_BASE, "Unweight_*.root")))
+        sps_to_run = []
+        for p in all_unweight:
+            name = os.path.basename(p)
+            if name == "UnweightDPS.root": continue
+            # Extract channel name: Unweight_<channel>.root -> <channel>
+            ch = name[len("Unweight_"):-len(".root")]
+            sps_to_run.append((ch, [p]))
+
+        if not sps_to_run:
+            print("No Unweight_*.root files found in %s" % SPS_BASE)
+            sys.exit(1)
+
+        # Load DPS
+        print("Loading DPS (eff mode)...")
+        dps = extract([DPS_FILE], "DPS")
+        if dps is None:
+            print("ERROR: cannot load DPS from %s" % DPS_FILE)
+            sys.exit(1)
+        print()
+
+        for ch_name, sps_files in sps_to_run:
+            tag = "Unweight_" + ch_name
+            outdir = os.path.join(BASE_OUT, ch_name)
+            os.makedirs(outdir, exist_ok=True)
+            print("=== %s ===" % tag)
+            sps = extract(sps_files, tag)
+            if sps is None:
+                print("  SKIP %s: extraction failed\n" % tag)
+                continue
+            print("  Plotting template-fit variables vs DPS...")
+            for vname, cfg in BINS.items():
+                plot_with_ratio(dps, [sps], vname, cfg, outdir)
+            print("  -> %s/\n" % outdir)
+
     else:
-        sps_dirs = sorted(
-            d for d in os.listdir(SPS_BASE)
-            if os.path.isdir(os.path.join(SPS_BASE, d)))
-
-    # Check which have .root files
-    sps_to_run = []
-    for d in sps_dirs:
-        full = os.path.join(SPS_BASE, d)
-        roots = sorted(glob.glob(os.path.join(full, "*.root")))
-        if roots:
-            sps_to_run.append((d, roots))
+        # ── GEN/RECO mode (original) ─────────────────────────
+        if SPS_DIR:
+            sps_dirs = [SPS_DIR]
         else:
-            print(f"Skip {d}: no .root files")
+            sps_dirs = sorted(
+                d for d in os.listdir(SPS_BASE)
+                if os.path.isdir(os.path.join(SPS_BASE, d)))
 
-    if not sps_to_run:
-        print("No SPS samples found.")
-        sys.exit(1)
+        sps_to_run = []
+        for d in sps_dirs:
+            full = os.path.join(SPS_BASE, d)
+            roots = sorted(glob.glob(os.path.join(full, "*.root")))
+            if roots:
+                sps_to_run.append((d, roots))
+            else:
+                print(f"Skip {d}: no .root files")
 
-    # Load DPS (once)
-    print("Loading DPS...")
-    dps = extract(DPS_FILE, "DPS")
-    if dps is None:
-        print("ERROR: cannot load DPS")
-        sys.exit(1)
-    print()
+        if not sps_to_run:
+            print("No SPS samples found.")
+            sys.exit(1)
 
-    # Process each SPS folder
-    for folder_name, sps_files in sps_to_run:
-        tag = f"SPS_{folder_name}"
-        outdir = os.path.join(BASE_OUT, folder_name)
-        os.makedirs(outdir, exist_ok=True)
-        print(f"=== {tag} ({len(sps_files)} file(s)) ===")
+        print("Loading DPS...")
+        dps = extract(DPS_FILE, "DPS")
+        if dps is None:
+            print("ERROR: cannot load DPS")
+            sys.exit(1)
+        print()
 
-        sps = extract(sps_files, tag)
-        if sps is None:
-            print(f"  SKIP {tag}: extraction failed\n")
-            continue
+        for folder_name, sps_files in sps_to_run:
+            tag = f"SPS_{folder_name}"
+            level = "RECO" if USE_RECO else "GEN"
+            outdir = os.path.join(BASE_OUT, level, folder_name)
+            os.makedirs(outdir, exist_ok=True)
+            print(f"=== {tag} ({len(sps_files)} file(s)) ===")
 
-        level = "RECO" if USE_RECO else "GEN"
-        print(f"  Plotting vs DPS at {level} level...")
+            sps = extract(sps_files, tag)
+            if sps is None:
+                print(f"  SKIP {tag}: extraction failed\n")
+                continue
 
-        for vname, cfg in BINS.items():
-            plot_with_ratio(dps, [sps], vname, cfg, outdir)
+            print(f"  Plotting vs DPS at {level} level...")
 
-        print(f"  -> {outdir}/\n")
+            for vname, cfg in BINS.items():
+                plot_with_ratio(dps, [sps], vname, cfg, outdir)
+
+            print(f"  -> {outdir}/\n")
 
     print(f"Done. Plots in {BASE_OUT}*/")

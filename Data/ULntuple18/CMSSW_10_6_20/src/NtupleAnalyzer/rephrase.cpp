@@ -7,28 +7,44 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "TLorentzVector.h"
+#include "TSystemDirectory.h"
+#include "TList.h"
 using namespace std;
 #define PI 3.14159265359
 // I/O settings area
-// Data
-#define N_DIR 4
-string prefix[N_DIR] = {"A", "B", "C", "D"};
-string infix = "/Ntuple_2018_";
-int suffix[N_DIR] = {65, 33, 34, 134};
-string outFile = "WeightData_prime.root";
-// SPS
+// ── MC mode: produce unweighted template files from SPS/DPS MC ──
+// Uncomment the block below and set MC_CHANNEL to run MC mode.
+// Output goes to UnweightMC/Unweight_<channel>.root (or UnweightDPS.root for DPS).
+// #define MC_MODE
+#ifdef MC_MODE
+  #define N_DIR 1
+  // --- set MC_CHANNEL to one of: DPS, ggpsi1psi2, ggpsi1psi2g, ggpsi1psi2g_gpt0p4, ggpsi1psi2g_gpt0p8
+  string MC_CHANNEL = "ggpsi1psi2g_gpt2p4";
+  string prefix[N_DIR] = {""};
+  string infix;  // filled below
+  int suffix[N_DIR] = {1};  // actual file count set below
+  string outFile;
+#else
+  // ── Data mode ──────────────────────────────────────────
+  #define N_DIR 4
+  string prefix[N_DIR] = {"A", "B", "C", "D"};
+  string infix = "/Ntuple_2018_";
+  int suffix[N_DIR] = {65, 33, 34, 134};
+  string outFile = "WeightData.root";
+#endif
+// SPS (old, kept for reference)
 // #define N_DIR 1
 // string prefix[N_DIR] = {""};
 // string infix = "/eos/home-c/chensh/JPsiPsi2s/SKIM_tightfilter/SPS/ULPythia2018/CMSSW_10_2_5/src/4mu_acc_eff/Ntuple/Ntuple_2018_SPS";
 // int suffix[N_DIR] = {10};
 // string outFile = "WeightSPS.root";
-// DPS
+// DPS (old, kept for reference)
 // #define N_DIR 1
 // string prefix[N_DIR] = {""};
 // string infix = "/eos/home-c/chensh/JPsiPsi2s/SKIM_tightfilter/DPS/ULPythia2018/CMSSW_10_2_5/src/4mu_acc_eff/pTHat4/Ntuple_2018_DPS";//Ntuple/Ntuple_2018_DPS";
 // int suffix[N_DIR] = {40};//{25};
 // string outFile = "WeightDPS.root";
-// Bdecay
+// Bdecay (old, kept for reference)
 // #define N_DIR 2
 // string prefix[N_DIR] = {"", ""};
 // string infix = "/eos/home-c/chensh/JPsiPsi2s/SKIM_tightfilter/Bdecay/ULPythia2018/CMSSW_10_2_5/src/";
@@ -44,13 +60,17 @@ class Process {
     Double_t calWeight(Double_t Jpsi_pt, Double_t Jpsi_y, Double_t psi2S_pt, Double_t psi2S_y) {
         int i = upper_bound(acc_y.begin(), acc_y.end(), Jpsi_y) - acc_y.begin() - 1, j = upper_bound(acc_pt.begin(), acc_pt.end(), Jpsi_pt) - acc_pt.begin() - 1;// i-J/psi y, j-J/psi pT
         int k = upper_bound(acc_y.begin(), acc_y.end(), psi2S_y) - acc_y.begin() - 1, l = upper_bound(acc_pt.begin(), acc_pt.end(), psi2S_pt) - acc_pt.begin() - 1;// k-psi(2S) y, l-psi(2S) pT
-        Double_t w = nGen_Jpsi[i][j] / nAcc_Jpsi[i][j] * nGen_psi2S[k][l] / nAcc_psi2S[k][l];
+        Double_t w = 1;
+        // Zero-division guards: skip factors where denominator = 0
+        if (nAcc_Jpsi[i][j] != 0)  w *= nGen_Jpsi[i][j] / nAcc_Jpsi[i][j];
+        if (nAcc_psi2S[k][l] != 0) w *= nGen_psi2S[k][l] / nAcc_psi2S[k][l];
         i = upper_bound(eff_y.begin(), eff_y.end(), Jpsi_y) - eff_y.begin() - 1;
         j = upper_bound(eff_pt.begin(), eff_pt.end(), Jpsi_pt) - eff_pt.begin() - 1;
         k = upper_bound(eff_y.begin(), eff_y.end(), psi2S_y) - eff_y.begin() - 1;
         l = upper_bound(eff_pt.begin(), eff_pt.end(), psi2S_pt) - eff_pt.begin() - 1;
-        // w = nBin_Jpsi[i][j] / nVtx_Jpsi[i][j] * nBin_psi2S[k][l] / nVtx_psi2S[k][l] * nVtx_evt[l][j] / nTrg_evt[l][j];
-        w *= nBin_Jpsi[i][j] / nVtx_Jpsi[i][j] * nBin_psi2S[k][l] / nVtx_psi2S[k][l] * nVtx_evt[l][j] / nTrg_evt[l][j];
+        if (nVtx_Jpsi[i][j] != 0)  w *= nBin_Jpsi[i][j] / nVtx_Jpsi[i][j];
+        if (nVtx_psi2S[k][l] != 0) w *= nBin_psi2S[k][l] / nVtx_psi2S[k][l];
+        if (nTrg_evt[l][j] != 0)  w *= nVtx_evt[l][j] / nTrg_evt[l][j];
         return w;
     }
     void readTree(string& fileName) {
@@ -163,7 +183,11 @@ class Process {
                 // psi2S_phi.push_back(REpsi2S_phi->at(psi2SId));
                 // // evt_d.push_back(REevt_d->at(j));
                 evt_vtxProb.push_back(REevt_vtxProb->at(j));
+#ifdef MC_MODE
+                evt_weight.push_back(1.0);  // unweighted for template MC
+#else
                 evt_weight.push_back(calWeight(REJpsi_pt->at(JpsiId), REJpsi_y->at(JpsiId), REpsi2S_pt->at(psi2SId), REpsi2S_y->at(psi2SId)));
+#endif
                 // // evt_weight.push_back(calWeight(REJpsi_pt->at(JpsiId), REJpsi_eta->at(JpsiId), REpsi2S_pt->at(psi2SId), REpsi2S_eta->at(psi2SId)));
                 totEvent++;
                 if(REevt_passHLT->at(j)) hltEvent++;
@@ -224,7 +248,7 @@ class Process {
             lineCnt++;
         }
         accFile.close();
-        ifstream effFile("efficiency_SPS+2DPS.txt");
+        ifstream effFile("efficiency_SPS+DPS_6_4.txt");
         if(!effFile.is_open()) return;
         int eff_ptBin = 0, eff_yBin = 0;
         lineCnt = 0;
@@ -272,15 +296,41 @@ class Process {
         return;
     }
     void loopOn() {
+#ifdef MC_MODE
+        // ── MC mode: glob files from directory ──────────────
+        string mc_dir;
+        if (MC_CHANNEL == "DPS")
+            mc_dir = "/eos/home-l/leyao/26JP/Ntuple/DPS/filter3p5";
+        else
+            mc_dir = "/eos/home-l/leyao/26JP/Ntuple/SPS/" + MC_CHANNEL;
+
+        outFile = "UnweightMC/Unweight_" + MC_CHANNEL + ".root";
+        if (MC_CHANNEL == "DPS") outFile = "UnweightMC/UnweightDPS.root";
+
+        // Find all .root files via TSystemDirectory
+        TSystemDirectory dir(mc_dir.c_str(), mc_dir.c_str());
+        TList *fileList = dir.GetListOfFiles();
+        if (fileList) {
+            TIter next(fileList);
+            TSystemFile *sf;
+            while ((sf = (TSystemFile*)next())) {
+                string fname = sf->GetName();
+                if (fname.size() > 5 && fname.substr(fname.size()-5) == ".root") {
+                    string fullPath = mc_dir + "/" + fname;
+                    readTree(fullPath);
+                }
+            }
+            delete fileList;
+        }
+#else
+        // ── Data mode: numbered files ──────────────────────
         for(int i = 0; i < N_DIR; i++) {
             for(int j = 1; j <= suffix[i]; j++) {
                 string fileName = prefix[i] + infix + prefix[i] + "_" + to_string(j) + ".root";
-                // string dir = "/eos/home-c/chensh/Data2018/A/Charmonium/2018A_Ntuple_chensh_v1/251210_052421/0000";
-                // string fileName = dir + infix + prefix[i] + "_" + to_string(j) + ".root";
-                // string fileName = prefix[i] + infix + subinfix[i] + "_" + to_string(j) + ".root";// For Bdecay
                 readTree(fileName);
             }
         }
+#endif
     }
 };
 
@@ -288,6 +338,7 @@ void rephrase() {
     Process process;
     process.readMatrix();
     process.loopOn();
+    gSystem->mkdir("UnweightMC", true);
     TFile file(outFile.c_str(), "RECREATE");
     TTree *outTree = new TTree("data", "data");
     // Define output tree variables
